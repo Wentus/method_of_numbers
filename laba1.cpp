@@ -1,121 +1,101 @@
-#include<iostream>
-#include <fstream> 
+#include <iostream>
+#include <cmath>
+#include <vector>
+
 using namespace std;
 
-int main()
-{
-    int i = 0, j = 0, k = 0, n = 0;
-    float **mat = NULL;
-    float d = 0.0;
-    
-    ifstream data("data.txt");
-
-    if (!data.is_open()) {
-     cout << "not found data"; //
-     return 1; 
-    }
-
-    data >> n;
-    
-    // Allocating memory for matrix array
-    mat = new float*[2*n];
-    for (i = 0; i < 2*n; ++i)
-    {
-        mat[i] = new float[2*n]();
-    }
-    
-    //Inputs the coefficients of the matrix
-    for(i = 0; i < n; ++i)
-    {
-        for(j = 0; j < n; ++j)
-        {
-            data >> mat[i][j];
+void print(vector< vector<double> > A) {
+    int n = A.size();
+    for (int i=0; i<n; i++) {
+        for (int j=0; j<2*n; j++) {
+            cout << A[i][j] << "\t";
+            if (j == n-1) {
+                cout << "| ";
+            } 
         }
-    }
-    
-    
-    // Initializing Right-hand side to identity matrix
-    for(i = 0; i < n; ++i)
-    {
-        for(j = 0; j < 2*n; ++j)
-        {
-            if(j == (i+n))
-            {
-                mat[i][j] = 1;
-            }
-        }
-    }
-    
-    // Partial pivoting
-    for(i = n; i > 1; --i)
-    {
-        if(mat[i-1][1] < mat[i][1])
-        {
-            for(j = 0; j < 2*n; ++j)
-            {
-                d = mat[i][j];
-                mat[i][j] = mat[i-1][j];
-                mat[i-1][j] = d;
-            }
-        }
+        cout << "\n";
     }
     cout << endl;
-    
-    // Pivoted output
-    cout << "Pivoted output: " << endl;
-    for(i = 0; i < n; ++i)
-    {
-        for(j = 0; j < 2*n; ++j)
-        {
-            cout << mat[i][j] << "\t";
+}
+
+void calculateInverse(vector< vector<double> >& A) {
+    int n = A.size();
+
+    for (int i=0; i<n; i++) {
+        // Search for maximum in this column
+        double maxEl = abs(A[i][i]);
+        int maxRow = i;
+        for (int k=i+1; k<n; k++) {
+            if (abs(A[k][i]) > maxEl) {
+                maxEl = A[k][i];
+                maxRow = k;
+            }
         }
-        cout << endl;
-    }
-    cout << endl;
-    
-    // Reducing To Diagonal Matrix
-    for(i = 0; i < n; ++i)
-    {
-        for(j = 0; j < 2*n; ++j)
-        {
-            if(j != i)
-            {
-                d = mat[j][i] / mat[i][i];
-                for(k = 0; k < n*2; ++k)
-                {
-                    mat[j][k] -= mat[i][k]*d;
+
+        // Swap maximum row with current row (column by column)
+        for (int k=i; k<2*n;k++) {
+            double tmp = A[maxRow][k];
+            A[maxRow][k] = A[i][k];
+            A[i][k] = tmp;
+        }
+
+        // Make all rows below this one 0 in current column
+        for (int k=i+1; k<n; k++) {
+            double c = -A[k][i]/A[i][i];
+            for (int j=i; j<2*n; j++) {
+                if (i==j) {
+                    A[k][j] = 0;
+                } else {
+                    A[k][j] += c * A[i][j];
                 }
             }
         }
     }
-    
-    // Reducing To Unit Matrix
-    for(i = 0; i < n; ++i)
-    {
-        d = mat[i][i];
-        for(j = 0; j < 2*n; ++j)
-        {
-            mat[i][j] = mat[i][j]/d;
+
+    // Solve equation Ax=b for an upper triangular matrix A
+    for (int i=n-1; i>=0; i--) {
+        for (int k=n; k<2*n;k++) {
+            A[i][k] /= A[i][i];
+        }
+        // this is not necessary, but the output looks nicer:
+        A[i][i] = 1; 
+
+        for (int rowModify=i-1;rowModify>=0; rowModify--) {
+            for (int columModify=n;columModify<2*n;columModify++) {
+                A[rowModify][columModify] -= A[i][columModify] 
+                                             * A[rowModify][i];
+            }
+            // this is not necessary, but the output looks nicer:
+            A[rowModify][i] = 0;
         }
     }
-    
-    // Print inverse of the input matrix
-    cout<<"Inverse matrix:" << endl;
-    for(i=0; i < n; ++i)
-    {
-        for(j = n; j < 2*n; ++j)
-        {
-            cout << mat[i][j] << "\t";
+}
+
+int main() {
+    int n;
+    cin >> n;
+
+    vector<double> line(2*n,0);
+    vector< vector<double> > A(n,line);
+
+    // Read input data
+    for (int i=0; i<n; i++) {
+        for (int j=0; j<n; j++) {
+            cin >> A[i][j];
         }
-        cout << endl;
     }
-    
-    // Deleting the memory allocated
-    for (i = 0; i < n; ++i)
-    {
-        delete[] mat[i];
+
+    for (int i=0; i<n; i++) {
+        A[i][n+i] = 1;
     }
-    delete[] mat;
-    
-    return 0;
+
+    // Print input
+    print(A);
+
+    // Calculate solution
+    calculateInverse(A);
+
+    // Print result
+    cout << "Result:" << endl;
+    print(A);
 }
